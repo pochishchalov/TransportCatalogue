@@ -29,7 +29,6 @@ namespace transport_catalogue {
 
 		const Stop& AddStop(Stop&& stop);
 		const Stop* GetStop(const std::string_view stop_name) const;
-		bool IsFindStop(const std::string_view stop_name) const;
 
 		struct Bus {
 			std::string name;
@@ -38,7 +37,6 @@ namespace transport_catalogue {
 
 		const Bus& AddBus(Bus&& bus);
 		const Bus* GetBus(std::string_view bus_name) const;
-		bool IsFindBus(const std::string_view bus_name) const;
 
 		const detail::RouteInformation GetRouteInformation(const std::string_view bus_name) const;
 		const std::set<std::string_view> GetStopInformation(const std::string_view stop_name) const;

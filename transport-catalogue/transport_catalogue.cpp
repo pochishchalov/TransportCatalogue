@@ -31,8 +31,7 @@ namespace transport_catalogue {
 	}
 
 	const TransportCatalogue::Stop* TransportCatalogue::GetStop(const std::string_view stop_name) const {
-		static const TransportCatalogue::Stop dummy_stop{};
-		return (stop_name_to_stops_and_stop_busses.count(stop_name)) ? stop_name_to_stops_and_stop_busses.at(stop_name).first : &dummy_stop;
+		return (stop_name_to_stops_and_stop_busses.count(stop_name)) ? stop_name_to_stops_and_stop_busses.at(stop_name).first : nullptr;
 	}
 
 	const TransportCatalogue::Bus& TransportCatalogue::AddBus(TransportCatalogue::Bus&& bus) {
@@ -47,25 +46,16 @@ namespace transport_catalogue {
 	}
 
 	const TransportCatalogue::Bus* TransportCatalogue::GetBus(const std::string_view bus_name) const {
-		static const TransportCatalogue::Bus dummy_bus{};
-		return (bus_name_to_busses.count(bus_name)) ? bus_name_to_busses.at(bus_name) : &dummy_bus;
-	}
-
-	bool TransportCatalogue::IsFindStop(const std::string_view stop_name) const {
-		return stop_name_to_stops_and_stop_busses.count(stop_name) != 0;
-	}
-
-	bool TransportCatalogue::IsFindBus(const std::string_view bus_name) const {
-		return bus_name_to_busses.count(bus_name) != 0;
+		return (bus_name_to_busses.count(bus_name)) ? bus_name_to_busses.at(bus_name) : nullptr;
 	}
 
 	const detail::RouteInformation TransportCatalogue::GetRouteInformation(const std::string_view bus_name) const {
 		const auto& found_bus_stops = GetBus(bus_name)->bus_stops;
 		return { static_cast<int>(found_bus_stops.size()), detail::UnigueStopsCount(found_bus_stops),
-			detail::CalculateRouteLength(found_bus_stops)};
+			detail::CalculateRouteLength(found_bus_stops) };
 	}
 
 	const std::set<std::string_view> TransportCatalogue::GetStopInformation(const std::string_view stop_name) const {
-		return (IsFindStop(stop_name)) ? stop_name_to_stops_and_stop_busses.at(stop_name).second : std::set<std::string_view>{};
+		return (GetStop(stop_name)) ? stop_name_to_stops_and_stop_busses.at(stop_name).second : std::set<std::string_view>{};
 	}
 }

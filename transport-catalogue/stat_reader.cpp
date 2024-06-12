@@ -13,7 +13,7 @@ namespace transport_catalogue {
             std::ostream& output) {
 
             output << "Bus "s << request << ": "s;
-            if (tansport_catalogue.IsFindBus(request)) {
+            if (tansport_catalogue.GetBus(request)) {
                 const auto info = tansport_catalogue.GetRouteInformation(request);
                 output << info.stops_count << " stops on route, "s << info.unique_stops_count
                     << " unique stops, "s << std::setprecision(6) << info.route_length << " route length"s << '\n';
@@ -27,7 +27,7 @@ namespace transport_catalogue {
             std::ostream& output) {
 
             output << "Stop "s << request << ": "s;
-            if (tansport_catalogue.IsFindStop(request)) {
+            if (tansport_catalogue.GetStop(request)) {
                 const auto info = tansport_catalogue.GetStopInformation(request);
                 if (info.empty()) {
                     output << "no buses"s << '\n';
@@ -56,13 +56,26 @@ namespace transport_catalogue {
             std::string_view command = request;
             command.remove_suffix(command.size() - space_pos);
             request.remove_prefix(space_pos + 1);
-            
+
             if (command == "Bus"s) {
                 detail::PrintBusStat(tansport_catalogue, request, output);
             }
 
             else if (command == "Stop"s) {
                 detail::PrintStopStat(tansport_catalogue, request, output);
+            }
+        }
+
+        void GetStat(const TransportCatalogue& tansport_catalogue, std::istream& input,
+            std::ostream& output) {
+
+            std::string line;
+            std::getline(input, line);
+            int stat_request_count = std::stoi(line);
+
+            for (int i = 0; i < stat_request_count; ++i) {
+                std::getline(input, line);
+                ParseAndPrintStat(tansport_catalogue, line, output);
             }
         }
     }

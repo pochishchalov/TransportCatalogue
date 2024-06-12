@@ -8,25 +8,25 @@
 
 namespace transport_catalogue {
 
-        namespace detail {
+    namespace detail {
 
-            struct CommandDescription {
-                // Определяет, задана ли команда (поле command непустое)
-                explicit operator bool() const {
-                    return !command.empty();
-                }
+        struct CommandDescription {
+            // Определяет, задана ли команда (поле command непустое)
+            explicit operator bool() const {
+                return !command.empty();
+            }
 
-                bool operator!() const {
-                    return !operator bool();
-                }
+            bool operator!() const {
+                return !operator bool();
+            }
 
-                std::string command;      // Название команды
-                std::string id;           // id маршрута или остановки
-                std::string description;  // Параметры команды
-            };
-        }
+            std::string command;      // Название команды
+            std::string id;           // id маршрута или остановки
+            std::string description;  // Параметры команды
+        };
+    }
 
-        namespace reader {
+    namespace reader {
 
         class InputReader {
         public:
@@ -39,6 +39,8 @@ namespace transport_catalogue {
              * Наполняет данными транспортный справочник, используя команды из commands_
              */
             void ApplyCommands(TransportCatalogue& catalogue) const;
+
+            void LoadCommands(std::istream& input, TransportCatalogue& catalogue);
 
         private:
             std::vector<detail::CommandDescription> commands_;

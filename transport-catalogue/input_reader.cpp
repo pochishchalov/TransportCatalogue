@@ -133,5 +133,16 @@ namespace transport_catalogue {
                 catalogue.AddBus({ commands_[bus_command_pos].id, std::move(bus_stops) });
             }
         }
+
+        void InputReader::LoadCommands(std::istream& input, TransportCatalogue& catalogue) {
+            std::string line;
+            std::getline(input, line);
+            int base_request_count = std::stoi(line);
+            for (int i = 0; i < base_request_count; ++i) {
+                std::getline(input, line);
+                ParseLine(line);
+            }
+            ApplyCommands(catalogue);
+        }
     }
 }

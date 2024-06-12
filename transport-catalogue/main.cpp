@@ -1,4 +1,4 @@
-﻿// Transport Catalogue
+﻿﻿// Transport Catalogue
 // Code review #8
 
 #include <iostream>
@@ -6,31 +6,24 @@
 
 #include "input_reader.h"
 #include "stat_reader.h"
+//#include "tests.h"
 
 using namespace std;
 
 int main() {
+
+    //------------------ for tests ------------------
+    
+    //transport_catalogue::tests::Test();
+    //cout << "Test was passed"s << endl;
+   
+    //-----------------------------------------------
+
     transport_catalogue::TransportCatalogue catalogue;
 
-    int base_request_count;
-    cin >> base_request_count >> ws;
+    transport_catalogue::reader::InputReader reader;
+    reader.LoadCommands(cin, catalogue);
 
-    {
-        transport_catalogue::reader::InputReader reader;
-        for (int i = 0; i < base_request_count; ++i) {
-            string line;
-            getline(cin, line);
-            reader.ParseLine(line);
-        }
-        reader.ApplyCommands(catalogue);
-    }
+    transport_catalogue::reader::GetStat(catalogue, cin, cout);
     
-    int stat_request_count;
-    cin >> stat_request_count >> ws;
-    for (int i = 0; i < stat_request_count; ++i) {
-        string line;
-        getline(cin, line);
-        transport_catalogue::reader::ParseAndPrintStat(catalogue, line, cout);
-    }
- 
 }
