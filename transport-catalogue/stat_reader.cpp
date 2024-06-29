@@ -16,7 +16,8 @@ namespace transport_catalogue {
             if (tansport_catalogue.GetBus(request)) {
                 const auto info = tansport_catalogue.GetRouteInformation(request);
                 output << info.stops_count << " stops on route, "s << info.unique_stops_count
-                    << " unique stops, "s << std::setprecision(6) << info.route_length << " route length"s << '\n';
+                    << " unique stops, "s << info.route_length << " route length, "s << std::setprecision(6)
+                    <<  info.curvature << " curvature"s << '\n';
             }
             else {
                 output << "not found"s << '\n';

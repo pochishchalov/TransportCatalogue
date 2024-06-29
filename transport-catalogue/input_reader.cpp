@@ -12,6 +12,35 @@ namespace transport_catalogue {
     namespace detail {
 
         /**
+         * Удаляет пробелы в начале и конце строки
+         */
+        std::string_view Trim(std::string_view string) {
+            const auto start = string.find_first_not_of(' ');
+            if (start == string.npos) {
+                return {};
+            }
+            return string.substr(start, string.find_last_not_of(' ') + 1 - start);
+        }
+
+        /**
+         * Парсит остановку и возвращает пару строк (название и координаты, расстояние до других остановок с названиями)
+         */
+        std::pair<std::string_view, std::string_view> ParseStop(std::string_view str) {
+            std::string_view coordinates = str;
+            
+            auto second_comma = str.find(',', str.find(',') + 1);
+
+            if (second_comma == str.npos) {
+                return { coordinates, {} };
+            }
+
+            coordinates.remove_suffix(coordinates.size() - second_comma);
+            str.remove_prefix(second_comma + 1);
+
+            return { Trim(coordinates), Trim(str)};
+        }
+
+        /**
          * Парсит строку вида "10.123,  -30.1837" и возвращает пару координат (широта, долгота)
          */
         geo::Coordinates ParseCoordinates(std::string_view str) {
@@ -31,18 +60,7 @@ namespace transport_catalogue {
 
             return { lat, lng };
         }
-
-        /**
-         * Удаляет пробелы в начале и конце строки
-         */
-        std::string_view Trim(std::string_view string) {
-            const auto start = string.find_first_not_of(' ');
-            if (start == string.npos) {
-                return {};
-            }
-            return string.substr(start, string.find_last_not_of(' ') + 1 - start);
-        }
-
+        
         /**
          * Разбивает строку string на n строк, с помощью указанного символа-разделителя delim
          */
@@ -59,6 +77,26 @@ namespace transport_catalogue {
                     result.push_back(substr);
                 }
                 pos = delim_pos + 1;
+            }
+
+            return result;
+        }
+
+        /**
+         * Парсит строку с расстоянием и названием остановки и возвращает пару (расстояние, название остановки)
+         */
+        std::vector<std::pair<int, std::string_view>> ParseDistanceToStop(std::string_view str) {
+            std::vector<std::pair<int, std::string_view>> result;
+
+            for (auto& distance_to_stop : Split(str, ',')) {
+                std::string_view str_distance = distance_to_stop;
+                str_distance.remove_suffix(str_distance.size() - str_distance.find('m'));
+                int distance = std::stoi(std::string(str_distance));
+                
+                auto second_space = distance_to_stop.find(' ', distance_to_stop.find(' ') + 1);
+                distance_to_stop.remove_prefix(second_space + 1);
+                
+                result.push_back({ distance, distance_to_stop });
             }
 
             return result;
@@ -116,22 +154,37 @@ namespace transport_catalogue {
         void InputReader::ApplyCommands([[maybe_unused]] TransportCatalogue& catalogue) const {
             std::vector<std::size_t> bus_commands_pos;
             bus_commands_pos.reserve(commands_.size());
+            std::vector<std::tuple<std::string_view, std::string_view, int>> stop_to_stop_distance;
+            stop_to_stop_distance.reserve(commands_.size());
             for (size_t i = 0; i < commands_.size(); ++i) {
                 if (commands_[i].command == "Stop") {
-                    catalogue.AddStop({ commands_[i].id, detail::ParseCoordinates(commands_[i].description) });
+                    auto stopcommand = detail::ParseStop(commands_[i].description);
+                    catalogue.AddStop({ commands_[i].id, detail::ParseCoordinates(stopcommand.first) });
+                    
+                    if (!stopcommand.second.empty()) {
+                        for (const auto& distance_to_stop : detail::ParseDistanceToStop(stopcommand.second)) {
+                            stop_to_stop_distance.push_back({ commands_[i].id, distance_to_stop.second, distance_to_stop.first });
+                        }
+                    }
+                    
                 }
                 else if (commands_[i].command == "Bus") {
                     bus_commands_pos.push_back(i);
                 }
             }
 
+            for (const auto& [first_stop, second_stop, distance] : stop_to_stop_distance) {
+                catalogue.AddDistanceBetweenStops(first_stop, second_stop, distance);
+            }
+
             for (const auto bus_command_pos : bus_commands_pos) {
-                std::vector<const TransportCatalogue::Stop*> bus_stops;
-                for (const auto stop_name : detail::ParseRoute(commands_[bus_command_pos].description)) {
+                std::vector<const Stop*> bus_stops;
+                for (const auto& stop_name : detail::ParseRoute(commands_[bus_command_pos].description)) {
                     bus_stops.push_back(catalogue.GetStop(stop_name));
                 }
                 catalogue.AddBus({ commands_[bus_command_pos].id, std::move(bus_stops) });
             }
+            
         }
 
         void InputReader::LoadCommands(std::istream& input, TransportCatalogue& catalogue) {

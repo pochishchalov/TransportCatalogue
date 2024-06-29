@@ -1,6 +1,4 @@
-﻿﻿// Transport Catalogue
-// Code review #8
-
+﻿#include <cassert>
 #include <iostream>
 #include <string>
 
@@ -18,7 +16,7 @@ int main() {
     //cout << "Test was passed"s << endl;
    
     //-----------------------------------------------
-
+    
     transport_catalogue::TransportCatalogue catalogue;
 
     transport_catalogue::reader::InputReader reader;
