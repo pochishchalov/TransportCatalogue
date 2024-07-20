@@ -1,27 +1,26 @@
-﻿#include <cassert>
+
+
 #include <iostream>
 #include <string>
 
-#include "input_reader.h"
-#include "stat_reader.h"
-//#include "tests.h"
+#include "json_reader.h"
 
 using namespace std;
 
 int main() {
-
-    //------------------ for tests ------------------
-    
-    //transport_catalogue::tests::Test();
-    //cout << "Test was passed"s << endl;
-   
-    //-----------------------------------------------
     
     transport_catalogue::TransportCatalogue catalogue;
+   
+    reader::JsonReader reader(std::cin);
+            
+    renderer::MapRenderer renderer(reader.GetReaderSettings());
 
-    transport_catalogue::reader::InputReader reader;
-    reader.LoadCommands(cin, catalogue);
+    handler::RequestHandler handler(catalogue, renderer);
 
-    transport_catalogue::reader::GetStat(catalogue, cin, cout);
+    reader.AddBaseRequests(catalogue);
+
+    const auto doc = reader.GetInfo(handler);
+
+    json::Print(doc, std::cout);
     
 }
