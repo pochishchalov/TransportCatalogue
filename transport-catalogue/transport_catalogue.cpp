@@ -1,7 +1,32 @@
 #include "transport_catalogue.h"
 
+#include <optional>
+#include <set>
+#include <unordered_set>
+
 namespace transport_catalogue {
 
+	using namespace std;
+
+	// Возвращает количество уникальных остановок в векторе
+	int UnigueStopsCount(vector<const domain::Stop*> bus_stops) {
+		unordered_set<string_view> unique_stops;
+		for (const auto stop : bus_stops) {
+			unique_stops.insert(stop->name);
+		}
+		return static_cast<int>(unique_stops.size());
+	}
+
+	// Возвращает "кратчайшую" длину маршрута 
+	double CalculateGeoDistance(vector<const domain::Stop*> bus_stops) {
+		double geo_distance = 0.0;
+		for (size_t i = 1; i < bus_stops.size(); ++i)
+		{
+			geo_distance += geo::ComputeDistance(bus_stops[i - 1]->coordinates,
+				bus_stops[i]->coordinates);
+		};
+		return geo_distance;
+	}
 
 	const domain::Stop& TransportCatalogue::AddStop(domain::Stop&& stop) {
 		stops_.push_back(stop);
@@ -65,5 +90,29 @@ namespace transport_catalogue {
 		};
 
 		return route_length;
+	}
+
+	const optional<detail::RouteInformation> TransportCatalogue::GetRouteInformation(const string_view bus_name) const {
+		if (GetBus(bus_name)) {
+			const auto& found_bus_stops = GetBus(bus_name)->bus_stops;
+			int route_length = CalculateRouteLength(found_bus_stops);
+
+			return detail::RouteInformation{ static_cast<int>(found_bus_stops.size()),
+				UnigueStopsCount(found_bus_stops), route_length,
+				 route_length / CalculateGeoDistance(found_bus_stops) };
+		}
+		else {
+			return {};
+		}
+	}
+
+	const std::optional<std::set<std::string_view>> TransportCatalogue::GetStopInformation(const std::string_view stop_name) const {
+
+		if (GetStop(stop_name)) {
+			return GetBusesByStop(stop_name);
+		}
+		else {
+			return {};
+		}
 	}
 }

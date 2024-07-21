@@ -2,20 +2,18 @@
 
 #include <set>
 #include <unordered_set>
-#include <iostream>
 
 namespace renderer {
 
 	using namespace std::literals;
 
 	// Для хранения уникальных маршрутов в лексиграфическом порядке по названию
-	using AllBusesPtr = std::set<const domain::Bus*, domain::BusPtrNameCompare>;
+	using BusesContainer = std::set<const domain::Bus*, domain::BusPtrNameCompare>;
 
 	// Для хранения уникальных остановок в лексиграфическом порядке по названию
-	using AllStopsPtr = std::set<const domain::Stop*, domain::StopPtrNameCompare>;
+	using StopsContainer = std::set<const domain::Stop*, domain::StopPtrNameCompare>;
 
-	// Возвращает набор всех координат всех маршрутов Bus
-	std::unordered_set<geo::Coordinates, geo::CoordinatesHash> GetAllCoordinates(const AllBusesPtr& buses) {
+	const std::unordered_set<geo::Coordinates, geo::CoordinatesHash> MapRenderer::GetAllCoordinates(const BusesContainer& buses) const {
 		std::unordered_set<geo::Coordinates, geo::CoordinatesHash> result;
 		for (const auto& bus : buses) {
 			for (const auto& bus_stop : bus->bus_stops) {
@@ -25,20 +23,18 @@ namespace renderer {
 		return result;
 	}
 
-	// Возвращает SphereProjector постороенный
-	SphereProjector GetSphereProjector(const AllBusesPtr& buses, const MapRendererSettings& settings) {
+	const SphereProjector MapRenderer::CreateProjector(const BusesContainer& buses) const {
 
 		// Точки, подлежащие проецированию
 		const auto coordinates = GetAllCoordinates(buses);
 
 		return {
 			coordinates.begin(), coordinates.end(),
-			settings.width, settings.height, settings.padding
+			settings_.width, settings_.height, settings_.padding
 		};
 	}
 
-	// Возвращает линию маршрута Bus
-	svg::Polyline GetPolylineRoute(const domain::Bus* bus, const SphereProjector& projector) {
+	const svg::Polyline MapRenderer::GetPolylineRoute(const domain::Bus* bus, const SphereProjector& projector) const {
 		svg::Polyline polyline;
 		for (const auto& bus_stop : bus->bus_stops) {
 			polyline.AddPoint(projector(bus_stop->coordinates));
@@ -46,12 +42,10 @@ namespace renderer {
 		return polyline;
 	}
 
-	// Отрисовывает линии маршрутов Bus
-	void RenderLines(const AllBusesPtr& buses, const MapRendererSettings& settings,
-		const SphereProjector& projector, svg::Document& doc) {
+	void MapRenderer::RenderLines(const BusesContainer& buses, const SphereProjector& projector, svg::Document& doc) const {
 
 		// Итератор ссылающийся на цвет линии маршрута
-		auto color_iter = settings.color_palette.begin();
+		auto color_iter = settings_.color_palette.begin();
 
 		// Отрисовываем маршруты
 		for (const auto& bus : buses) {
@@ -64,49 +58,43 @@ namespace renderer {
 			// Добавляем Polyline в Document с настройками из settings_
 			doc.Add(polyline.SetStrokeColor(*color_iter)
 				.SetFillColor(svg::NoneColor)
-				.SetStrokeWidth(settings.line_width)
+				.SetStrokeWidth(settings_.line_width)
 				.SetStrokeLineCap(svg::StrokeLineCap::ROUND)
 				.SetStrokeLineJoin(svg::StrokeLineJoin::ROUND));
 
-			(color_iter + 1 == settings.color_palette.end()) ? color_iter = settings.color_palette.begin() : ++color_iter;
+			(color_iter + 1 == settings_.color_palette.end()) ? color_iter = settings_.color_palette.begin() : ++color_iter;
 		}
 	}
 
-	// Получаем "базовый" текст названия маршрута Bus
-	svg::Text GetBusBaseText(const std::string& name, const MapRendererSettings& settings) {
-		return svg::Text().SetOffset(settings.bus_label_offset)
-						.SetFontSize(settings.bus_label_font_size)
-						.SetFontFamily("Verdana"s)
-						.SetFontWeight("bold"s)
-						.SetData(name);
+	const svg::Text MapRenderer::GetBusBaseText(const std::string& name) const {
+		return svg::Text().SetOffset(settings_.bus_label_offset)
+			.SetFontSize(settings_.bus_label_font_size)
+			.SetFontFamily("Verdana"s)
+			.SetFontWeight("bold"s)
+			.SetData(name);
 	}
 
-	// Добавляет текст, а именно текстовую подложку и сам основной текст
-	void AddText(const svg::Text& base_text, svg::Document& doc, const SphereProjector& projector,
-		const MapRendererSettings& settings, const svg::Color& color, const geo::Coordinates& coord,
-		const svg::StrokeLineCap line_cap, const svg::StrokeLineJoin line_join)
+	void MapRenderer::AddText(const svg::Text& base_text, svg::Document& doc, const svg::Color& color,
+		const svg::Point& point) const
 	{
-		const svg::Point point_coord = projector(coord);
 
 		// Добавляем подложку
-		doc.Add(svg::Text{ base_text }.SetPosition(point_coord)
-									.SetFillColor(settings.underlayer_color)
-									.SetStrokeColor(settings.underlayer_color)
-									.SetStrokeWidth(settings.underlayer_width)
-									.SetStrokeLineCap(line_cap)
-									.SetStrokeLineJoin(line_join));
+		doc.Add(svg::Text{ base_text }.SetPosition(point)
+			.SetFillColor(settings_.underlayer_color)
+			.SetStrokeColor(settings_.underlayer_color)
+			.SetStrokeWidth(settings_.underlayer_width)
+			.SetStrokeLineCap(svg::StrokeLineCap::ROUND)
+			.SetStrokeLineJoin(svg::StrokeLineJoin::ROUND));
 
 		// Добавляем основную надпись
-		doc.Add(svg::Text{ base_text }.SetPosition(point_coord)
-									.SetFillColor(color));
+		doc.Add(svg::Text{ base_text }.SetPosition(point)
+			.SetFillColor(color));
 	}
 
-	// Отрисовывает текст названия маршрутов Bus
-	void RenderBusText(const AllBusesPtr& buses, const MapRendererSettings& settings,
-		const SphereProjector& projector, svg::Document& doc) {
+	void MapRenderer::RenderBusText(const BusesContainer& buses, const SphereProjector& projector, svg::Document& doc) const {
 
 		// Итератор ссылающийся на цвет линии маршрута
-		auto color_iter = settings.color_palette.begin();
+		auto color_iter = settings_.color_palette.begin();
 
 		// Отрисовываем названия маршрутов
 		for (const auto& bus : buses) {
@@ -116,89 +104,80 @@ namespace renderer {
 			}
 
 			// Получаем базовый Text названия маршрута
-			svg::Text bus_name_text = GetBusBaseText(bus->name, settings);
+			svg::Text bus_name_text = GetBusBaseText(bus->name);
 
 			// Добавляем название маршрута в координаты конечной остановки
-			AddText(bus_name_text, doc, projector, settings, *color_iter, bus->bus_stops[0]->coordinates,
-				svg::StrokeLineCap::ROUND, svg::StrokeLineJoin::ROUND);
+			AddText(bus_name_text, doc, *color_iter, projector(bus->bus_stops[0]->coordinates));
 
 			// Если маршрут не кольцевой - добавляем название маршрута у второй конечной остановки
 			if (!bus->is_roundtrip) {
 				const auto& second_end_station = bus->bus_stops[bus->bus_stops.size() / 2];
 				if (second_end_station->name != bus->bus_stops[0]->name) {
-					AddText(bus_name_text, doc, projector, settings, *color_iter, second_end_station->coordinates, 
-						svg::StrokeLineCap::ROUND, svg::StrokeLineJoin::ROUND);
+					AddText(bus_name_text, doc, *color_iter, projector(second_end_station->coordinates));
 				}
 			}
-			(color_iter + 1 == settings.color_palette.end()) ? color_iter = settings.color_palette.begin() : ++color_iter;
+			(color_iter + 1 == settings_.color_palette.end()) ? color_iter = settings_.color_palette.begin() : ++color_iter;
 		}
 	}
 
-	// Возвращает набор (set) остановок отсортированных в лексиграфическом порядке по названию
-	const AllStopsPtr GetAllStops(const AllBusesPtr& buses) {
-		AllStopsPtr result;
+	const StopsContainer MapRenderer::GetStopsContainer(const BusesContainer& buses) const {
+		StopsContainer result;
 		for (const auto& bus : buses) {
 			result.insert(bus->bus_stops.begin(), bus->bus_stops.end());
 		}
 		return result;
 	}
 
-	// Отрисовывает символы остановок
-	void RenderStopSymbols(const AllStopsPtr& stops, const MapRendererSettings& settings,
-		const SphereProjector& projector, svg::Document& doc) {
-		 
+	void MapRenderer::RenderStopSymbols(const StopsContainer& stops, const SphereProjector& projector, svg::Document& doc) const {
+
 		for (const auto& stop : stops) {
 			doc.Add(svg::Circle().SetCenter(projector(stop->coordinates))
-								.SetRadius(settings.stop_radius)
-								.SetFillColor("white"s));
+				.SetRadius(settings_.stop_radius)
+				.SetFillColor("white"s));
 		}
 	}
 
-	// Получаем "базовый" текст названия остановки Stop
-	svg::Text GetStopBaseText(const std::string& name, const MapRendererSettings& settings) {
-		return svg::Text().SetOffset(settings.stop_label_offset)
-			.SetFontSize(settings.stop_label_font_size)
+	const svg::Text MapRenderer::GetStopBaseText(const std::string& name) const {
+		return svg::Text().SetOffset(settings_.stop_label_offset)
+			.SetFontSize(settings_.stop_label_font_size)
 			.SetFontFamily("Verdana"s)
 			.SetData(name);
 	}
 
-	// Отрисовывает названия остановок
-	void RenderStopsText(const AllStopsPtr& stops, const MapRendererSettings& settings,
-		const SphereProjector& projector, svg::Document& doc) {
+	void MapRenderer::RenderStopsText(const StopsContainer& stops, const SphereProjector& projector, svg::Document& doc) const {
 
 		// Отрисовываем названия остановок
 		for (const auto& stop : stops) {
 
 			// Получаем базовый Text названия остановки
-			svg::Text stop_name_text = GetStopBaseText(stop->name, settings);
+			svg::Text stop_name_text = GetStopBaseText(stop->name);
 
 			// Добавляем название остановки
-			AddText(stop_name_text, doc, projector, settings, svg::Color("black"s), stop->coordinates,
-				svg::StrokeLineCap::ROUND, svg::StrokeLineJoin::ROUND);
+			AddText(stop_name_text, doc, svg::Color("black"s), projector(stop->coordinates));
 		}
 	}
 
-	svg::Document MapRenderer::Render(const AllBusesPtr& buses) const {
+	svg::Document MapRenderer::Render(const BusesContainer& buses) const {
 
 		svg::Document doc;
 
-		// Создаём проектор сферических координат на карту
-		const SphereProjector projector = GetSphereProjector(buses, settings_);
+		// Создаём проектор сферических координат на карту и добавляем его в MapRenderer
+		const SphereProjector projector = CreateProjector(buses);
 
 		// Отрисовываем линии маршрутов
-		RenderLines(buses, settings_, projector, doc);
+		RenderLines(buses, projector, doc);
 
 		// Отрисовываем названия маршрутов
-		RenderBusText(buses, settings_, projector, doc);
+		RenderBusText(buses, projector, doc);
 
 		// Получаем уникальные остановки в лексиграфическом порядке
-		const auto stops = GetAllStops(buses);
+		const auto stops = GetStopsContainer(buses);
 
 		// Отрисовываем символы остановок
-		RenderStopSymbols(stops, settings_, projector, doc);
+		RenderStopSymbols(stops, projector, doc);
 
 		// Отрисовываем названия остановок
-		RenderStopsText(stops, settings_, projector, doc);
+		RenderStopsText(stops, projector, doc);
 
 		return doc;
 

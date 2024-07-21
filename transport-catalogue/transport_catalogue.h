@@ -2,6 +2,7 @@
 
 #include <deque>
 #include <set>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -12,8 +13,14 @@
 
 namespace transport_catalogue {
 
-
 	namespace detail {
+
+		struct RouteInformation {
+			int stops_count = 0;
+			int unique_stops_count = 0;
+			int route_length = 0;
+			double curvature = 0.0;
+		};
 
 		// Структура для доступа к расстоянию между остановками в словаре TransportCatalogue
 		struct StopToStop {
@@ -54,14 +61,24 @@ namespace transport_catalogue {
 
 		// Возвращает "набор" названий автобусных маршрутов проходящих через остановку 
 		const std::set<std::string_view>& GetBusesByStop(std::string_view stop_name) const
-		{ return stop_name_to_stops_and_stop_buses_.at(stop_name).second; };
+		{
+			return stop_name_to_stops_and_stop_buses_.at(stop_name).second;
+		};
 
 		// Возвращает словарь с автобусными маршрутами
-		const std::unordered_map<std::string_view, const domain::Bus*> GetBuses() const 
-		{ return bus_name_to_buses_; }
+		const std::unordered_map<std::string_view, const domain::Bus*> GetBuses() const
+		{
+			return bus_name_to_buses_;
+		}
+
+		// Возвращает информацию о маршруте (запрос Bus)
+		const std::optional<detail::RouteInformation> GetRouteInformation(const std::string_view bus_name) const;
+
+		// Возвращает маршруты, проходящие через остановку (запрос Stop)
+		const std::optional<std::set<std::string_view>> GetStopInformation(const std::string_view stop_name) const;
 
 	private:
-		
+
 		std::deque<domain::Stop> stops_;
 		std::deque<domain::Bus> buses_;
 

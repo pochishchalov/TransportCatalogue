@@ -5,10 +5,10 @@
 
 #include <algorithm>
 #include <cstdlib>
-#include <iostream>
 #include <set>
 #include <optional>
 #include <vector>
+#include <unordered_set>
 
 namespace renderer {
 
@@ -19,6 +19,9 @@ namespace renderer {
 
     class SphereProjector {
     public:
+
+        SphereProjector() = default;
+
         // points_begin и points_end задают начало и конец интервала элементов geo::Coordinates
         template <typename PointInputIt>
         SphereProjector(PointInputIt points_begin, PointInputIt points_end,
@@ -80,10 +83,10 @@ namespace renderer {
         }
 
     private:
-        double padding_;
-        double min_lon_ = 0;
-        double max_lat_ = 0;
-        double zoom_coeff_ = 0;
+        double padding_ = 0.0;
+        double min_lon_ = 0.0;
+        double max_lat_ = 0.0;
+        double zoom_coeff_ = 0.0;
     };
 
     // Структура для хранения настроек MapRenderer
@@ -105,19 +108,69 @@ namespace renderer {
 
     class MapRenderer {
     public:
+
+        // Для хранения уникальных маршрутов в лексиграфическом порядке по названию
+        using BusesContainer = std::set<const domain::Bus*, domain::BusPtrNameCompare>;
+
+        // Для хранения уникальных остановок в лексиграфическом порядке по названию
+        using StopsContainer = std::set<const domain::Stop*, domain::StopPtrNameCompare>;
+
         MapRenderer(MapRendererSettings settings)
             :settings_(std::move(settings))
         {
         }
 
-        // Для хранения уникальных маршрутов в лексиграфическом порядке по названию
-        using AllBusesPtr = std::set<const domain::Bus*, domain::BusPtrNameCompare>;
-
         // Возвращает svg::Document с визуализиацией карты маршрутов 
-        svg::Document Render(const AllBusesPtr& buses) const;
+        svg::Document Render(const BusesContainer& buses) const;
 
     private:
         MapRendererSettings settings_;
+
+        //------------------------------------------------------
+
+                    // Функции отрисовки
+
+        // Отрисовывает линии маршрутов Bus
+        void RenderLines(const BusesContainer& buses, const SphereProjector& projector, svg::Document& doc) const;
+
+        // Отрисовывает текст названия маршрутов Bus
+        void RenderBusText(const BusesContainer& buses, const SphereProjector& projector, svg::Document& doc) const;
+
+        // Отрисовывает символы остановок
+        void RenderStopSymbols(const StopsContainer& stops, const SphereProjector& projector, svg::Document& doc) const;
+
+        // Отрисовывает названия остановок
+        void RenderStopsText(const StopsContainer& stops, const SphereProjector& projector, svg::Document& doc) const;
+
+        //------------------------------------------------------
+
+            // Вспомогательные функции отрисовки
+
+        // Возвращает линию маршрута Bus
+        const svg::Polyline GetPolylineRoute(const domain::Bus* bus, const SphereProjector& projector) const;
+
+        // Возвращает "базовый" текст названия маршрута Bus
+        const svg::Text GetBusBaseText(const std::string& name) const;
+
+        // Добавляет текст, а именно текстовую подложку и сам основной текст
+        void AddText(const svg::Text& base_text, svg::Document& doc, const svg::Color& color, const svg::Point& point) const;
+
+        // Получаем "базовый" текст названия остановки Stop
+        const svg::Text GetStopBaseText(const std::string& name) const;
+
+        //------------------------------------------------------
+
+                // Вспомогательные функции
+
+        // Возвращает набор всех координат всех маршрутов Bus
+        const std::unordered_set<geo::Coordinates, geo::CoordinatesHash> GetAllCoordinates(const BusesContainer& buses) const;
+
+        // Возвращает SphereProjector постороенный из BusesContainer
+        const SphereProjector CreateProjector(const BusesContainer& buses) const;
+
+        // Возвращает набор (set) остановок отсортированных в лексиграфическом порядке по названию
+        const StopsContainer GetStopsContainer(const BusesContainer& buses) const;
+
     };
 
 } // namespace renderer

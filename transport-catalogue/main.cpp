@@ -1,5 +1,4 @@
 
-
 #include <iostream>
 #include <string>
 
@@ -8,19 +7,19 @@
 using namespace std;
 
 int main() {
-    
-    transport_catalogue::TransportCatalogue catalogue;
-   
-    reader::JsonReader reader(std::cin);
-            
-    renderer::MapRenderer renderer(reader.GetReaderSettings());
 
-    handler::RequestHandler handler(catalogue, renderer);
+    transport_catalogue::TransportCatalogue catalogue;
+
+    reader::JsonReader reader(std::cin);
 
     reader.AddBaseRequests(catalogue);
 
-    const auto doc = reader.GetInfo(handler);
+    renderer::MapRenderer renderer(reader.GetRenderSettings());
+
+    handler::RequestHandler handler(catalogue, renderer);
+
+    const auto doc = reader.GetInfo(handler, catalogue);
 
     json::Print(doc, std::cout);
-    
+
 }

@@ -15,10 +15,10 @@ namespace reader {
         void AddBaseRequests(transport_catalogue::TransportCatalogue& catalogue);
 
         // Возвращает Document по запросу "stat_requests"
-        json::Document GetInfo(const handler::RequestHandler& handler);
+        json::Document GetInfo(const handler::RequestHandler& handler, const transport_catalogue::TransportCatalogue& catalogue);
 
         // Возвращает MapRendererSettings из словаря "render_settings"
-        renderer::MapRendererSettings GetReaderSettings() const;
+        renderer::MapRendererSettings GetRenderSettings() const;
 
     private:
 

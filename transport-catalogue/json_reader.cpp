@@ -80,9 +80,9 @@ namespace reader {
 	}
 
 	// Возвращает словарь с информацией по запросу "Bus"
-	json::Dict GetBusInfo(const json::Dict& request, const handler::RequestHandler& handler) {
+	json::Dict GetBusInfo(const json::Dict& request, const transport_catalogue::TransportCatalogue& catalogue) {
 		const auto& name = request.at("name"s).AsString();
-		if (const auto info = handler.GetRouteInformation(name)) {
+		if (const auto info = catalogue.GetRouteInformation(name)) {
 			const auto info_value = info.value();
 			return json::Dict{ {"curvature"s, info_value.curvature},
 										{"request_id"s, request.at("id"s).AsInt()},
@@ -97,10 +97,10 @@ namespace reader {
 	}
 
 	// Возвращает словарь с информацией по запросу "Stop"
-	json::Dict GetStopInfo(const json::Dict& request, const handler::RequestHandler& handler) {
+	json::Dict GetStopInfo(const json::Dict& request, const transport_catalogue::TransportCatalogue& catalogue) {
 		const auto& name = request.at("name"s).AsString();
 
-		if (const auto info = handler.GetStopInformation(name)) {
+		if (const auto info = catalogue.GetStopInformation(name)) {
 			const auto info_value = info.value();
 			json::Array info_vector;
 			info_vector.reserve(info_value.size());
@@ -124,12 +124,12 @@ namespace reader {
 		std::ostringstream buffer;
 
 		doc.Render(buffer);
-		
+
 		return json::Dict{ {"request_id"s, request.at("id"s).AsInt()},
 							{"map"s, buffer.str()} };
 	}
 
-	json::Document JsonReader::GetInfo(const handler::RequestHandler& handler) {
+	json::Document JsonReader::GetInfo(const handler::RequestHandler& handler, const transport_catalogue::TransportCatalogue& catalogue) {
 
 		const auto& stat_requests = document_.GetRoot().AsMap().at("stat_requests"s).AsArray();
 		if (stat_requests.empty()) {
@@ -140,10 +140,10 @@ namespace reader {
 			const auto& map_request = request.AsMap();
 			const auto& type = map_request.at("type"s).AsString();
 			if (type == "Bus"s) {
-				result.emplace_back(std::move(GetBusInfo(map_request, handler)));
+				result.emplace_back(std::move(GetBusInfo(map_request, catalogue)));
 			}
 			else if (type == "Stop"s) {
-				result.emplace_back(std::move(GetStopInfo(map_request, handler)));
+				result.emplace_back(std::move(GetStopInfo(map_request, catalogue)));
 			}
 			else if (type == "Map"s) {
 				result.emplace_back(std::move(GetMapInfo(map_request, handler)));
@@ -178,7 +178,7 @@ namespace reader {
 		return std::monostate();
 	}
 
-	renderer::MapRendererSettings JsonReader::GetReaderSettings() const {
+	renderer::MapRendererSettings JsonReader::GetRenderSettings() const {
 
 		const auto& render_settings = document_.GetRoot().AsMap().at("render_settings"s).AsMap();
 
