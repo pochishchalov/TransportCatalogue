@@ -22,7 +22,7 @@ namespace transport_catalogue {
 			double curvature = 0.0;
 		};
 
-		// РЎС‚СЂСѓРєС‚СѓСЂР° РґР»СЏ РґРѕСЃС‚СѓРїР° Рє СЂР°СЃСЃС‚РѕСЏРЅРёСЋ РјРµР¶РґСѓ РѕСЃС‚Р°РЅРѕРІРєР°РјРё РІ СЃР»РѕРІР°СЂРµ TransportCatalogue
+		// Структура для доступа к расстоянию между остановками в словаре TransportCatalogue
 		struct StopToStop {
 			const domain::Stop* first_stop;
 			const domain::Stop* second_stop;
@@ -48,48 +48,44 @@ namespace transport_catalogue {
 		const domain::Bus& AddBus(domain::Bus&& bus);
 		const domain::Bus* GetBus(std::string_view bus_name) const;
 
-		// Р”РѕР±Р°РІР»СЏРµС‚ "РґРµР№СЃС‚РІРёС‚РµР»СЊРЅРѕРµ" СЂР°СЃСЃС‚РѕСЏРЅРёРµ РјРµР¶РґСѓ РѕСЃС‚Р°РЅРѕРІРєР°РјРё
+		// Добавляет "действительное" расстояние между остановками
 		void AddDistanceBetweenStops(std::string_view first_stop,
 			std::string_view second_stop, int distance);
 
-		// Р’РѕР·РІСЂР°С‰Р°РµС‚ "РґРµР№СЃС‚РІРёС‚РµР»СЊРЅРѕРµ" СЂР°СЃСЃС‚РѕСЏРЅРёРµ РјРµР¶РґСѓ РѕСЃС‚Р°РЅРѕРІРєР°РјРё
+		// Возвращает "действительное" расстояние между остановками
 		int GetDistanceBetweenStops(std::string_view first_stop,
 			std::string_view second_stop) const;
 
-		// Р’РѕР·РІСЂР°С‰Р°РµС‚ РґР»РёРЅСѓ РјР°СЂС€СЂСѓС‚Р°
+		// Возвращает длину маршрута
 		int CalculateRouteLength(std::vector<const domain::Stop*> bus_stops) const;
 
-		// Р’РѕР·РІСЂР°С‰Р°РµС‚ "РЅР°Р±РѕСЂ" РЅР°Р·РІР°РЅРёР№ Р°РІС‚РѕР±СѓСЃРЅС‹С… РјР°СЂС€СЂСѓС‚РѕРІ РїСЂРѕС…РѕРґСЏС‰РёС… С‡РµСЂРµР· РѕСЃС‚Р°РЅРѕРІРєСѓ 
+		// Возвращает "набор" названий автобусных маршрутов проходящих через остановку 
 		const std::set<std::string_view>& GetBusesByStop(std::string_view stop_name) const
-		{
-			return stop_name_to_stops_and_stop_buses_.at(stop_name).second;
-		};
+		{ return stop_name_to_stops_and_stop_buses_.at(stop_name).second; };
 
-		// Р’РѕР·РІСЂР°С‰Р°РµС‚ СЃР»РѕРІР°СЂСЊ СЃ Р°РІС‚РѕР±СѓСЃРЅС‹РјРё РјР°СЂС€СЂСѓС‚Р°РјРё
-		const std::unordered_map<std::string_view, const domain::Bus*> GetBuses() const
-		{
-			return bus_name_to_buses_;
-		}
+		// Возвращает словарь с автобусными маршрутами
+		const std::unordered_map<std::string_view, const domain::Bus*> GetBuses() const 
+		{ return bus_name_to_buses_; }
 
-		// Р’РѕР·РІСЂР°С‰Р°РµС‚ РёРЅС„РѕСЂРјР°С†РёСЋ Рѕ РјР°СЂС€СЂСѓС‚Рµ (Р·Р°РїСЂРѕСЃ Bus)
+		// Возвращает информацию о маршруте (запрос Bus)
 		const std::optional<detail::RouteInformation> GetRouteInformation(const std::string_view bus_name) const;
 
-		// Р’РѕР·РІСЂР°С‰Р°РµС‚ РјР°СЂС€СЂСѓС‚С‹, РїСЂРѕС…РѕРґСЏС‰РёРµ С‡РµСЂРµР· РѕСЃС‚Р°РЅРѕРІРєСѓ (Р·Р°РїСЂРѕСЃ Stop)
+		// Возвращает маршруты, проходящие через остановку (запрос Stop)
 		const std::optional<std::set<std::string_view>> GetStopInformation(const std::string_view stop_name) const;
 
 	private:
-
+		
 		std::deque<domain::Stop> stops_;
 		std::deque<domain::Bus> buses_;
 
-		// РЎР»РѕРІР°СЂСЊ С…СЂР°РЅСЏС‰РёР№ СѓРєР°Р·Р°С‚РµР»Рё РЅР° РѕСЃС‚Р°РЅРѕРІРєРё Рё "РЅР°Р±РѕСЂ" РЅР°Р·РІР°РЅРёР№ Р°РІС‚РѕР±СѓСЃРѕРІ РїСЂРѕС…РѕРґСЏС‰РёС… С‡РµСЂРµР· СЌС‚Сѓ РѕСЃС‚Р°РЅРѕРІРєСѓ СЃ РґРѕСЃС‚СѓРїРѕРј РїРѕ РёРјРµРЅРё РѕСЃС‚Р°РЅРѕРІРєРё
+		// Словарь хранящий указатели на остановки и "набор" названий автобусов проходящих через эту остановку с доступом по имени остановки
 		std::unordered_map<std::string_view, std::pair<const domain::Stop*,
 			std::set<std::string_view>>> stop_name_to_stops_and_stop_buses_;
 
-		//  РЎР»РѕРІР°СЂСЊ С…СЂР°РЅСЏС‰РёР№ СѓРєР°Р·Р°С‚РµР»Рё РЅР° Р°РІС‚РѕР±СѓСЃРЅС‹Рµ РјР°СЂС€СЂСѓС‚С‹ СЃ РґРѕСЃС‚СѓРїРѕРј РїРѕ РµРіРѕ РёРјРµРЅРё
+		//  Словарь хранящий указатели на автобусные маршруты с доступом по его имени
 		std::unordered_map<std::string_view, const domain::Bus*> bus_name_to_buses_;
 
-		//  РЎР»РѕРІР°СЂСЊ С…СЂР°РЅСЏС‰РёР№ "РґРµР№СЃС‚РІРёС‚РµР»СЊРЅРѕРµ" СЂР°СЃСЃС‚РѕСЏРЅРёСЏ РјРµР¶РґСѓ РѕСЃС‚Р°РЅРѕРІРєР°РјРё СЃ РґРѕСЃС‚СѓРїРѕРј РїРѕ СЃС‚СЂСѓРєС‚СѓСЂРµ StopToStop
+		//  Словарь хранящий "действительное" расстояния между остановками с доступом по структуре StopToStop
 		std::unordered_map<detail::StopToStop, int, detail::StopToStopHash> stops_to_stop_to_distance_;
 
 	};

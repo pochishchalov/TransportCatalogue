@@ -1,32 +1,26 @@
 #include "map_renderer.h"
 
-#include <set>
-#include <unordered_set>
+#include <vector>
 
 namespace renderer {
 
 	using namespace std::literals;
 
-	// Для хранения уникальных маршрутов в лексиграфическом порядке по названию
-	using BusesContainer = std::set<const domain::Bus*, domain::BusPtrNameCompare>;
-
-	// Для хранения уникальных остановок в лексиграфическом порядке по названию
-	using StopsContainer = std::set<const domain::Stop*, domain::StopPtrNameCompare>;
-
-	const std::unordered_set<geo::Coordinates, geo::CoordinatesHash> MapRenderer::GetAllCoordinates(const BusesContainer& buses) const {
-		std::unordered_set<geo::Coordinates, geo::CoordinatesHash> result;
-		for (const auto& bus : buses) {
-			for (const auto& bus_stop : bus->bus_stops) {
-				result.insert(bus_stop->coordinates);
-			}
+	const std::vector<geo::Coordinates> MapRenderer::GetAllCoordinates(const StopsContainer& stops) const {
+		
+		std::vector<geo::Coordinates> result;
+		result.reserve(stops.size());
+		for (const auto& stop : stops) {
+			result.push_back(stop->coordinates);
 		}
+
 		return result;
 	}
 
-	const SphereProjector MapRenderer::CreateProjector(const BusesContainer& buses) const {
+	const SphereProjector MapRenderer::CreateProjector(const StopsContainer& stops) const{
 
 		// Точки, подлежащие проецированию
-		const auto coordinates = GetAllCoordinates(buses);
+		const auto coordinates = GetAllCoordinates(stops);
 
 		return {
 			coordinates.begin(), coordinates.end(),
@@ -68,10 +62,10 @@ namespace renderer {
 
 	const svg::Text MapRenderer::GetBusBaseText(const std::string& name) const {
 		return svg::Text().SetOffset(settings_.bus_label_offset)
-			.SetFontSize(settings_.bus_label_font_size)
-			.SetFontFamily("Verdana"s)
-			.SetFontWeight("bold"s)
-			.SetData(name);
+						.SetFontSize(settings_.bus_label_font_size)
+						.SetFontFamily("Verdana"s)
+						.SetFontWeight("bold"s)
+						.SetData(name);
 	}
 
 	void MapRenderer::AddText(const svg::Text& base_text, svg::Document& doc, const svg::Color& color,
@@ -80,15 +74,15 @@ namespace renderer {
 
 		// Добавляем подложку
 		doc.Add(svg::Text{ base_text }.SetPosition(point)
-			.SetFillColor(settings_.underlayer_color)
-			.SetStrokeColor(settings_.underlayer_color)
-			.SetStrokeWidth(settings_.underlayer_width)
-			.SetStrokeLineCap(svg::StrokeLineCap::ROUND)
-			.SetStrokeLineJoin(svg::StrokeLineJoin::ROUND));
+									.SetFillColor(settings_.underlayer_color)
+									.SetStrokeColor(settings_.underlayer_color)
+									.SetStrokeWidth(settings_.underlayer_width)
+									.SetStrokeLineCap(svg::StrokeLineCap::ROUND)
+									.SetStrokeLineJoin(svg::StrokeLineJoin::ROUND));
 
 		// Добавляем основную надпись
 		doc.Add(svg::Text{ base_text }.SetPosition(point)
-			.SetFillColor(color));
+									.SetFillColor(color));
 	}
 
 	void MapRenderer::RenderBusText(const BusesContainer& buses, const SphereProjector& projector, svg::Document& doc) const {
@@ -123,17 +117,21 @@ namespace renderer {
 	const StopsContainer MapRenderer::GetStopsContainer(const BusesContainer& buses) const {
 		StopsContainer result;
 		for (const auto& bus : buses) {
-			result.insert(bus->bus_stops.begin(), bus->bus_stops.end());
+			result.insert(result.end(), bus->bus_stops.begin(), bus->bus_stops.end());
 		}
+		std::sort(result.begin(), result.end(), [](const domain::Stop* lhs, const domain::Stop* rhs) {
+			return lhs->name < rhs->name;
+			});
+		result.erase(std::unique(result.begin(), result.end()), result.end());
 		return result;
 	}
 
 	void MapRenderer::RenderStopSymbols(const StopsContainer& stops, const SphereProjector& projector, svg::Document& doc) const {
-
+		 
 		for (const auto& stop : stops) {
 			doc.Add(svg::Circle().SetCenter(projector(stop->coordinates))
-				.SetRadius(settings_.stop_radius)
-				.SetFillColor("white"s));
+								.SetRadius(settings_.stop_radius)
+								.SetFillColor("white"s));
 		}
 	}
 
@@ -157,21 +155,21 @@ namespace renderer {
 		}
 	}
 
-	svg::Document MapRenderer::Render(const BusesContainer& buses) const {
+	svg::Document MapRenderer::Render(const BusesContainer& buses) const{
 
 		svg::Document doc;
 
+		// Получаем уникальные остановки в лексиграфическом порядке
+		const auto stops = GetStopsContainer(buses);
+		
 		// Создаём проектор сферических координат на карту и добавляем его в MapRenderer
-		const SphereProjector projector = CreateProjector(buses);
-
+		const SphereProjector projector = CreateProjector(stops);
+		
 		// Отрисовываем линии маршрутов
 		RenderLines(buses, projector, doc);
 
 		// Отрисовываем названия маршрутов
 		RenderBusText(buses, projector, doc);
-
-		// Получаем уникальные остановки в лексиграфическом порядке
-		const auto stops = GetStopsContainer(buses);
 
 		// Отрисовываем символы остановок
 		RenderStopSymbols(stops, projector, doc);

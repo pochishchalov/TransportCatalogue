@@ -17,14 +17,5 @@ namespace domain {
 		std::vector<const Stop*> bus_stops;
 		bool is_roundtrip = false;
 	};
-
-	struct StopPtrNameCompare {
-		bool operator()(const Stop* lhs, const Stop* rhs) const;
-	};
-
-	struct BusPtrNameCompare {
-		bool operator()(const Bus* lhs, const Bus* rhs) const;
-	};
 	
-
 } // namespace domain

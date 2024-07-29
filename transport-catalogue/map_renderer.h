@@ -5,12 +5,16 @@
 
 #include <algorithm>
 #include <cstdlib>
-#include <set>
 #include <optional>
 #include <vector>
-#include <unordered_set>
 
 namespace renderer {
+
+    // Для хранения уникальных маршрутов в лексиграфическом порядке по названию
+    using BusesContainer = std::vector<const domain::Bus*>;
+
+    // Для хранения уникальных остановок в лексиграфическом порядке по названию
+    using StopsContainer = std::vector<const domain::Stop*>;
 
     inline const double EPSILON = 1e-6;
     inline bool IsZero(double value) {
@@ -109,12 +113,6 @@ namespace renderer {
     class MapRenderer {
     public:
 
-        // Для хранения уникальных маршрутов в лексиграфическом порядке по названию
-        using BusesContainer = std::set<const domain::Bus*, domain::BusPtrNameCompare>;
-
-        // Для хранения уникальных остановок в лексиграфическом порядке по названию
-        using StopsContainer = std::set<const domain::Stop*, domain::StopPtrNameCompare>;
-
         MapRenderer(MapRendererSettings settings)
             :settings_(std::move(settings))
         {
@@ -127,7 +125,7 @@ namespace renderer {
         MapRendererSettings settings_;
 
         //------------------------------------------------------
-
+        
                     // Функции отрисовки
 
         // Отрисовывает линии маршрутов Bus
@@ -143,7 +141,7 @@ namespace renderer {
         void RenderStopsText(const StopsContainer& stops, const SphereProjector& projector, svg::Document& doc) const;
 
         //------------------------------------------------------
-
+        
             // Вспомогательные функции отрисовки
 
         // Возвращает линию маршрута Bus
@@ -161,12 +159,12 @@ namespace renderer {
         //------------------------------------------------------
 
                 // Вспомогательные функции
-
+        
         // Возвращает набор всех координат всех маршрутов Bus
-        const std::unordered_set<geo::Coordinates, geo::CoordinatesHash> GetAllCoordinates(const BusesContainer& buses) const;
+        const std::vector<geo::Coordinates> GetAllCoordinates(const StopsContainer& stops) const;
 
         // Возвращает SphereProjector постороенный из BusesContainer
-        const SphereProjector CreateProjector(const BusesContainer& buses) const;
+        const SphereProjector CreateProjector(const StopsContainer& stops) const;
 
         // Возвращает набор (set) остановок отсортированных в лексиграфическом порядке по названию
         const StopsContainer GetStopsContainer(const BusesContainer& buses) const;

@@ -1,5 +1,6 @@
 #include "transport_catalogue.h"
 
+#include <algorithm>
 #include <optional>
 #include <set>
 #include <unordered_set>
@@ -10,11 +11,14 @@ namespace transport_catalogue {
 
 	// Возвращает количество уникальных остановок в векторе
 	int UnigueStopsCount(vector<const domain::Stop*> bus_stops) {
-		unordered_set<string_view> unique_stops;
-		for (const auto stop : bus_stops) {
-			unique_stops.insert(stop->name);
-		}
-		return static_cast<int>(unique_stops.size());
+		auto arr = bus_stops;
+
+		std::sort(arr.begin(), arr.end(), [](const domain::Stop* lhs, const domain::Stop* rhs) {
+			return lhs->name < rhs->name;
+			});
+		arr.erase(std::unique(arr.begin(), arr.end()), arr.end());
+
+		return static_cast<int>(arr.size());
 	}
 
 	// Возвращает "кратчайшую" длину маршрута 

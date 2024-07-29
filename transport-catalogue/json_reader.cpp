@@ -1,4 +1,5 @@
 #include "json_reader.h"
+#include "json_builder.h"
 
 #include <iostream>
 
@@ -80,24 +81,32 @@ namespace reader {
 	}
 
 	// Возвращает словарь с информацией по запросу "Bus"
-	json::Dict GetBusInfo(const json::Dict& request, const transport_catalogue::TransportCatalogue& catalogue) {
+	json::Node GetBusInfo(const json::Dict& request, const transport_catalogue::TransportCatalogue& catalogue) {
 		const auto& name = request.at("name"s).AsString();
 		if (const auto info = catalogue.GetRouteInformation(name)) {
 			const auto info_value = info.value();
-			return json::Dict{ {"curvature"s, info_value.curvature},
-										{"request_id"s, request.at("id"s).AsInt()},
-										{"route_length"s, info_value.route_length},
-										{"stop_count"s, info_value.stops_count},
-										{"unique_stop_count"s, info_value.unique_stops_count} };
+			return json::Builder{}
+						.StartDict()
+						.Key("curvature"s).Value(info_value.curvature)
+						.Key("request_id"s).Value(request.at("id"s).AsInt())
+						.Key("route_length"s).Value(info_value.route_length)
+						.Key("stop_count"s).Value(info_value.stops_count)
+						.Key("unique_stop_count"s).Value(info_value.unique_stops_count)
+						.EndDict()
+						.Build();
 		}
 		else {
-			return json::Dict{ {"request_id"s, request.at("id"s).AsInt()},
-										{"error_message"s, "not found"s} };
+			return json::Builder{}
+						.StartDict()
+						.Key("request_id"s).Value(request.at("id"s).AsInt())
+						.Key("error_message"s).Value("not found"s)
+						.EndDict()
+						.Build();
 		}
 	}
 
 	// Возвращает словарь с информацией по запросу "Stop"
-	json::Dict GetStopInfo(const json::Dict& request, const transport_catalogue::TransportCatalogue& catalogue) {
+	json::Node GetStopInfo(const json::Dict& request, const transport_catalogue::TransportCatalogue& catalogue) {
 		const auto& name = request.at("name"s).AsString();
 
 		if (const auto info = catalogue.GetStopInformation(name)) {
@@ -107,16 +116,24 @@ namespace reader {
 			for (const auto bus : info_value) {
 				info_vector.emplace_back(static_cast<std::string>(bus));
 			}
-			return json::Dict{ {"buses"s, std::move(info_vector)},
-										{"request_id"s, request.at("id"s).AsInt()} };
+			return json::Builder{}
+						.StartDict()
+						.Key("buses"s).Value(std::move(info_vector))
+						.Key("request_id"s).Value(request.at("id"s).AsInt())
+						.EndDict()
+						.Build();
 		}
 		else {
-			return json::Dict{ {"request_id"s, request.at("id"s).AsInt()},
-										{"error_message"s, "not found"s} };
+			return json::Builder{}
+						.StartDict()
+						.Key("request_id"s).Value(request.at("id"s).AsInt())
+						.Key("error_message"s).Value("not found"s)
+						.EndDict()
+						.Build();
 		}
 	}
 	// Возвращает словарь с информацией по запросу "Map"
-	json::Dict GetMapInfo(const json::Dict& request, const handler::RequestHandler& handler) {
+	json::Node GetMapInfo(const json::Dict& request, const handler::RequestHandler& handler) {
 
 		svg::Document doc = handler.RenderMap();
 
@@ -124,9 +141,13 @@ namespace reader {
 		std::ostringstream buffer;
 
 		doc.Render(buffer);
-
-		return json::Dict{ {"request_id"s, request.at("id"s).AsInt()},
-							{"map"s, buffer.str()} };
+		
+		return json::Builder{}
+					.StartDict()
+					.Key("request_id"s).Value(request.at("id"s).AsInt())
+					.Key("map"s).Value(buffer.str())
+					.EndDict()
+					.Build();
 	}
 
 	json::Document JsonReader::GetInfo(const handler::RequestHandler& handler, const transport_catalogue::TransportCatalogue& catalogue) {

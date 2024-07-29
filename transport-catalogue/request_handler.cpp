@@ -1,25 +1,28 @@
 #include "request_handler.h"
 
-#include <set>
+#include <vector>
 
 namespace handler {
 
 	using namespace std;
 
-	// Для хранения уникальных маршрутов в лексиграфическом порядке по названию
-	using BusesContainer = std::set<const domain::Bus*, domain::BusPtrNameCompare>;
-
-	const BusesContainer RequestHandler::GetBusesPtr() const {
-		std::set<const domain::Bus*, domain::BusPtrNameCompare> result;
+	const renderer::BusesContainer RequestHandler::GetBusesPtr() const {
 		const auto& buses = catalogue_.GetBuses();
+
+		std::vector<const domain::Bus*> result;
+		result.reserve(buses.size());
+
 		for (const auto& bus : buses) {
-			result.insert(bus.second);
+			result.push_back(bus.second);
 		}
+		std::sort(result.begin(), result.end(), [](const domain::Bus* lhs, const domain::Bus* rhs) {
+			return lhs->name < rhs->name;
+			});
 		return result;
 	}
 
-	svg::Document RequestHandler::RenderMap() const {
-
+	svg::Document RequestHandler::RenderMap() const{
+		
 		return renderer_.Render(GetBusesPtr());
 	}
 
