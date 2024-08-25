@@ -114,18 +114,6 @@ namespace renderer {
 		}
 	}
 
-	const StopsContainer MapRenderer::GetStopsContainer(const BusesContainer& buses) const {
-		StopsContainer result;
-		for (const auto& bus : buses) {
-			result.insert(result.end(), bus->bus_stops.begin(), bus->bus_stops.end());
-		}
-		std::sort(result.begin(), result.end(), [](const domain::Stop* lhs, const domain::Stop* rhs) {
-			return lhs->name < rhs->name;
-			});
-		result.erase(std::unique(result.begin(), result.end()), result.end());
-		return result;
-	}
-
 	void MapRenderer::RenderStopSymbols(const StopsContainer& stops, const SphereProjector& projector, svg::Document& doc) const {
 		 
 		for (const auto& stop : stops) {
@@ -155,12 +143,9 @@ namespace renderer {
 		}
 	}
 
-	svg::Document MapRenderer::Render(const BusesContainer& buses) const{
+	svg::Document MapRenderer::Render(const BusesContainer& buses, const StopsContainer& stops) const{
 
 		svg::Document doc;
-
-		// Получаем уникальные остановки в лексиграфическом порядке
-		const auto stops = GetStopsContainer(buses);
 		
 		// Создаём проектор сферических координат на карту и добавляем его в MapRenderer
 		const SphereProjector projector = CreateProjector(stops);

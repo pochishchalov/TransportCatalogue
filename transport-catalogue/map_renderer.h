@@ -119,7 +119,7 @@ namespace renderer {
         }
 
         // Возвращает svg::Document с визуализиацией карты маршрутов 
-        svg::Document Render(const BusesContainer& buses) const;
+        svg::Document Render(const BusesContainer& buses, const StopsContainer& stops) const;
 
     private:
         MapRendererSettings settings_;
@@ -165,9 +165,6 @@ namespace renderer {
 
         // Возвращает SphereProjector постороенный из BusesContainer
         const SphereProjector CreateProjector(const StopsContainer& stops) const;
-
-        // Возвращает набор (set) остановок отсортированных в лексиграфическом порядке по названию
-        const StopsContainer GetStopsContainer(const BusesContainer& buses) const;
 
     };
 

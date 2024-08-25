@@ -10,14 +10,14 @@ namespace json {
 	
 	class Builder
 	{
-		// Вспомогательные классы строителей для построения JSON 
+		// Р’СЃРїРѕРјРѕРіР°С‚РµР»СЊРЅС‹Рµ РєР»Р°СЃСЃС‹ СЃС‚СЂРѕРёС‚РµР»РµР№ РґР»СЏ РїРѕСЃС‚СЂРѕРµРЅРёСЏ JSON 
 
 		class BaseBuilder;
 		class DictBuilder;
 		class ArrayBuilder;
 
-		// Классы-контексты для ограничения вызова невалидных методов
-		// класса Builder в определенном состоянии
+		// РљР»Р°СЃСЃС‹-РєРѕРЅС‚РµРєСЃС‚С‹ РґР»СЏ РѕРіСЂР°РЅРёС‡РµРЅРёСЏ РІС‹Р·РѕРІР° РЅРµРІР°Р»РёРґРЅС‹С… РјРµС‚РѕРґРѕРІ
+		// РєР»Р°СЃСЃР° Builder РІ РѕРїСЂРµРґРµР»РµРЅРЅРѕРј СЃРѕСЃС‚РѕСЏРЅРёРё
 		
 		class BaseContext;
 		class DictItemContext;
@@ -64,24 +64,24 @@ namespace json {
 		void SetDictBuilder();
 		void SetPrevBuilder();
 
-		// Родительский класс "базового" строителя
+		// Р РѕРґРёС‚РµР»СЊСЃРєРёР№ РєР»Р°СЃСЃ "Р±Р°Р·РѕРІРѕРіРѕ" СЃС‚СЂРѕРёС‚РµР»СЏ
 		class BaseBuilder {
 		public:
 
 			virtual ~BaseBuilder() = default;
 
-			// Ничего не делает, служит для переопределения в DictBuilder
+			// РќРёС‡РµРіРѕ РЅРµ РґРµР»Р°РµС‚, СЃР»СѓР¶РёС‚ РґР»СЏ РїРµСЂРµРѕРїСЂРµРґРµР»РµРЅРёСЏ РІ DictBuilder
 			virtual Builder& Key(Builder& builder, std::string) {
 				return builder;
 			}
 			virtual Builder& Value(Builder& builder, Node::Value value);
 
-			// Ничего не делает, служит для переопределения в DictBuilder
+			// РќРёС‡РµРіРѕ РЅРµ РґРµР»Р°РµС‚, СЃР»СѓР¶РёС‚ РґР»СЏ РїРµСЂРµРѕРїСЂРµРґРµР»РµРЅРёСЏ РІ DictBuilder
 			virtual Builder& EndDict(Builder& builder) {
 				return builder;
 			}
 
-			// Ничего не делает, служит для переопределения в ArrayBuilder
+			// РќРёС‡РµРіРѕ РЅРµ РґРµР»Р°РµС‚, СЃР»СѓР¶РёС‚ РґР»СЏ РїРµСЂРµРѕРїСЂРµРґРµР»РµРЅРёСЏ РІ ArrayBuilder
 			virtual Builder& EndArray(Builder& builder) {
 				return builder;
 			}
@@ -91,7 +91,7 @@ namespace json {
 			virtual Node Build(Builder& builder);
 		};
 
-		// Класс для создания словаря json::Dict
+		// РљР»Р°СЃСЃ РґР»СЏ СЃРѕР·РґР°РЅРёСЏ СЃР»РѕРІР°СЂСЏ json::Dict
 		class DictBuilder : public BaseBuilder {
 		public:
 
@@ -109,7 +109,7 @@ namespace json {
 			std::string key_;
 		};
 
-		// Класс для создания вектора json::Array
+		// РљР»Р°СЃСЃ РґР»СЏ СЃРѕР·РґР°РЅРёСЏ РІРµРєС‚РѕСЂР° json::Array
 		class ArrayBuilder : public BaseBuilder {
 		public:
 

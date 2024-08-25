@@ -9,7 +9,7 @@ namespace transport_catalogue {
 
 	using namespace std;
 
-	// Возвращает количество уникальных остановок в векторе
+	// Р’РѕР·РІСЂР°С‰Р°РµС‚ РєРѕР»РёС‡РµСЃС‚РІРѕ СѓРЅРёРєР°Р»СЊРЅС‹С… РѕСЃС‚Р°РЅРѕРІРѕРє РІ РІРµРєС‚РѕСЂРµ
 	int UnigueStopsCount(vector<const domain::Stop*> bus_stops) {
 		auto arr = bus_stops;
 
@@ -21,7 +21,7 @@ namespace transport_catalogue {
 		return static_cast<int>(arr.size());
 	}
 
-	// Возвращает "кратчайшую" длину маршрута 
+	// Р’РѕР·РІСЂР°С‰Р°РµС‚ "РєСЂР°С‚С‡Р°Р№С€СѓСЋ" РґР»РёРЅСѓ РјР°СЂС€СЂСѓС‚Р° 
 	double CalculateGeoDistance(vector<const domain::Stop*> bus_stops) {
 		double geo_distance = 0.0;
 		for (size_t i = 1; i < bus_stops.size(); ++i)
@@ -38,7 +38,7 @@ namespace transport_catalogue {
 		return stops_.back();
 	}
 
-	const domain::Stop* TransportCatalogue::GetStop(const std::string_view stop_name) const {
+	const domain::Stop* TransportCatalogue::GetStop(const string_view stop_name) const {
 		const auto result = stop_name_to_stops_and_stop_buses_.find(stop_name);
 		return (result == stop_name_to_stops_and_stop_buses_.end()) ? nullptr : result->second.first;
 
@@ -55,20 +55,20 @@ namespace transport_catalogue {
 		return buses_.back();
 	}
 
-	const domain::Bus* TransportCatalogue::GetBus(const std::string_view bus_name) const {
+	const domain::Bus* TransportCatalogue::GetBus(const string_view bus_name) const {
 		const auto result = bus_name_to_buses_.find(bus_name);
 		return (result == bus_name_to_buses_.end()) ? nullptr : result->second;
 
 	}
 
-	void TransportCatalogue::AddDistanceBetweenStops(std::string_view first_stop,
-		std::string_view second_stop, int distance) {
+	void TransportCatalogue::AddDistanceBetweenStops(string_view first_stop,
+		string_view second_stop, int distance) {
 		stops_to_stop_to_distance_[detail::StopToStop{ GetStop(first_stop),
 			GetStop(second_stop) }] = distance;
 	}
 
-	int TransportCatalogue::GetDistanceBetweenStops(std::string_view first_stop,
-		std::string_view second_stop) const {
+	int TransportCatalogue::GetDistanceBetweenStops(string_view first_stop,
+		string_view second_stop) const {
 		auto iter = stops_to_stop_to_distance_.find(detail::StopToStop{ GetStop(first_stop),
 			GetStop(second_stop) });
 		if (iter != stops_to_stop_to_distance_.end()) {
@@ -84,7 +84,7 @@ namespace transport_catalogue {
 		return 0;
 	}
 
-	int TransportCatalogue::CalculateRouteLength(std::vector<const domain::Stop*> bus_stops) const {
+	int TransportCatalogue::CalculateRouteLength(vector<const domain::Stop*> bus_stops) const {
 		int route_length = 0;
 
 		for (size_t i = 1; i < bus_stops.size(); ++i)
@@ -110,7 +110,7 @@ namespace transport_catalogue {
 		}
 	}
 
-	const std::optional<std::set<std::string_view>> TransportCatalogue::GetStopInformation(const std::string_view stop_name) const {
+	const optional<set<string_view>> TransportCatalogue::GetStopInformation(const string_view stop_name) const {
 
 		if (GetStop(stop_name)) {
 			return GetBusesByStop(stop_name);
@@ -118,5 +118,32 @@ namespace transport_catalogue {
 		else {
 			return {};
 		}
+	}
+
+	const vector<const domain::Bus*> TransportCatalogue::GetUniqueBuses() const {
+		const auto& buses = bus_name_to_buses_;
+
+		vector<const domain::Bus*> result;
+		result.reserve(buses.size());
+
+		for (const auto& bus : buses) {
+			result.push_back(bus.second);
+		}
+		std::sort(result.begin(), result.end(), [](const domain::Bus* lhs, const domain::Bus* rhs) {
+			return lhs->name < rhs->name;
+			});
+		return result;
+	}
+
+	const vector<const domain::Stop*> TransportCatalogue::GetUniqueStops() const {
+		std::vector<const domain::Stop*> result;
+		for (const auto& bus : GetUniqueBuses()) {
+			result.insert(result.end(), bus->bus_stops.begin(), bus->bus_stops.end());
+		}
+		std::sort(result.begin(), result.end(), [](const domain::Stop* lhs, const domain::Stop* rhs) {
+			return lhs->name < rhs->name;
+			});
+		result.erase(std::unique(result.begin(), result.end()), result.end());
+		return result;
 	}
 }

@@ -1,6 +1,1 @@
-#include "domain.h"
-
-namespace domain {
-
-
-} // namespace domain
+// Вставьте сюда решение из предыдущего спринта

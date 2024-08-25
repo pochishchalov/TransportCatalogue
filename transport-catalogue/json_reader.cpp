@@ -1,6 +1,8 @@
 #include "json_reader.h"
 #include "json_builder.h"
+#include "transport_router.h"
 
+#include <algorithm>
 #include <iostream>
 
 namespace reader {
@@ -80,10 +82,19 @@ namespace reader {
 		AddBuses(base_requests, catalogue, commands.second);
 	}
 
+	json::Node ErrorNode(const json::Dict& request) {
+		return json::Builder{}
+					.StartDict()
+					.Key("request_id"s).Value(request.at("id"s).AsInt())
+					.Key("error_message"s).Value("not found"s)
+					.EndDict()
+					.Build();
+	}
+
 	// Возвращает словарь с информацией по запросу "Bus"
-	json::Node GetBusInfo(const json::Dict& request, const transport_catalogue::TransportCatalogue& catalogue) {
+	json::Node GetBusInfo(const json::Dict& request, const handler::RequestHandler& handler) {
 		const auto& name = request.at("name"s).AsString();
-		if (const auto info = catalogue.GetRouteInformation(name)) {
+		if (const auto info = handler.GetRouteInformation(name)) {
 			const auto info_value = info.value();
 			return json::Builder{}
 						.StartDict()
@@ -96,20 +107,15 @@ namespace reader {
 						.Build();
 		}
 		else {
-			return json::Builder{}
-						.StartDict()
-						.Key("request_id"s).Value(request.at("id"s).AsInt())
-						.Key("error_message"s).Value("not found"s)
-						.EndDict()
-						.Build();
-		}
+			return ErrorNode(request);
+;		}
 	}
 
 	// Возвращает словарь с информацией по запросу "Stop"
-	json::Node GetStopInfo(const json::Dict& request, const transport_catalogue::TransportCatalogue& catalogue) {
+	json::Node GetStopInfo(const json::Dict& request, const handler::RequestHandler& handler) {
 		const auto& name = request.at("name"s).AsString();
 
-		if (const auto info = catalogue.GetStopInformation(name)) {
+		if (const auto info = handler.GetStopInformation(name)) {
 			const auto info_value = info.value();
 			json::Array info_vector;
 			info_vector.reserve(info_value.size());
@@ -124,12 +130,7 @@ namespace reader {
 						.Build();
 		}
 		else {
-			return json::Builder{}
-						.StartDict()
-						.Key("request_id"s).Value(request.at("id"s).AsInt())
-						.Key("error_message"s).Value("not found"s)
-						.EndDict()
-						.Build();
+			return ErrorNode(request);
 		}
 	}
 	// Возвращает словарь с информацией по запросу "Map"
@@ -150,7 +151,59 @@ namespace reader {
 					.Build();
 	}
 
-	json::Document JsonReader::GetInfo(const handler::RequestHandler& handler, const transport_catalogue::TransportCatalogue& catalogue) {
+	json::Array GetRouteItems(const router::RouterInformation& info) {
+		json::Array result;
+		for (const auto& item : info.items) {
+			if (item.type == router::RouteType::WAIT) {
+				result.push_back( json::Builder{}
+					.StartDict()
+					.Key("type"s).Value("Wait"s)
+					.Key("time"s).Value(item.time)
+					.Key("stop_name"s).Value(std::string(item.data))
+					.EndDict()
+					.Build()
+				);
+			}
+			else {
+				result.push_back(json::Builder{}
+					.StartDict()
+					.Key("type"s).Value("Bus"s)
+					.Key("time"s).Value(item.time)
+					.Key("bus"s).Value(std::string(item.data))
+					.Key("span_count"s).Value(item.span_count)
+					.EndDict()
+					.Build()
+				);
+			}
+		}
+		return result;
+	}
+
+	// Возвращает словарь с информацией по запросу "Route"
+	json::Node GetRouteInfo(const json::Dict& request, const handler::RequestHandler& handler) {
+
+		const auto& from = request.at("from"s).AsString();
+		const auto& to = request.at("to"s).AsString();
+
+		const auto info = handler.GetRouterInfo(from, to);
+
+		if (info.has_value()) {
+			const auto info_value = info.value();
+
+			return json::Builder{}
+				.StartDict()
+				.Key("request_id"s).Value(request.at("id"s).AsInt())
+				.Key("total_time"s).Value(info_value.total_time)
+				.Key("items"s).Value(GetRouteItems(info_value))
+				.EndDict()
+				.Build();
+		}
+		else {
+			return ErrorNode(request);
+		}
+	}
+
+	json::Document JsonReader::GetInfo(const handler::RequestHandler& handler) {
 
 		const auto& stat_requests = document_.GetRoot().AsMap().at("stat_requests"s).AsArray();
 		if (stat_requests.empty()) {
@@ -161,13 +214,16 @@ namespace reader {
 			const auto& map_request = request.AsMap();
 			const auto& type = map_request.at("type"s).AsString();
 			if (type == "Bus"s) {
-				result.emplace_back(std::move(GetBusInfo(map_request, catalogue)));
+				result.emplace_back(std::move(GetBusInfo(map_request, handler)));
 			}
 			else if (type == "Stop"s) {
-				result.emplace_back(std::move(GetStopInfo(map_request, catalogue)));
+				result.emplace_back(std::move(GetStopInfo(map_request, handler)));
 			}
 			else if (type == "Map"s) {
 				result.emplace_back(std::move(GetMapInfo(map_request, handler)));
+			}
+			else if (type == "Route"s) {
+				result.emplace_back(std::move(GetRouteInfo(map_request, handler)));
 			}
 		}
 		return json::Document(std::move(result));
@@ -228,6 +284,12 @@ namespace reader {
 		}
 
 		return settings;
+	}
+
+	void JsonReader::AddRoutingSettings(transport_catalogue::TransportCatalogue& catalogue) {
+		const auto& routing_settings = document_.GetRoot().AsMap().at("routing_settings"s).AsMap();
+		catalogue.SetBusWaitTime(routing_settings.at("bus_wait_time"s).AsInt()); 
+		catalogue.SetBusVelocity(routing_settings.at("bus_velocity"s).AsDouble());
 	}
 
 } // namespace reader
